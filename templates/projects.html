@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+
+{% block title %}แผนงานโครงการทั้งหมด{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><i class="fa-solid fa-list-check" style="color: var(--accent);"></i> แผนงานโครงการ คณะวิทยาศาสตร์และเทคโนโลยี</h2>
+    <p>ติดตามความก้าวหน้าโครงการตามแผนปฏิบัติราชการประจำปี และสถานะวงจร PDCA</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('export_csv', category=selected_category or '', status=selected_status or '', fiscal_year=selected_year or '', search=search_query or '') }}" class="btn btn-secondary" id="btnExportFilteredCsv">
+      <i class="fa-solid fa-file-csv"></i> ส่งออกข้อมูลตามตัวกรอง (CSV)
+    </a>
+    <a href="{{ url_for('project_add') }}" class="btn btn-primary" id="btnAddNewProjectTop">
+      <i class="fa-solid fa-plus-circle"></i> เสนอโครงการใหม่
+    </a>
+  </div>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="filter-bar" id="projectFilterBar">
+  <form method="GET" action="{{ url_for('projects_list') }}" style="display: flex; gap: 0.75rem; width: 100%; flex-wrap: wrap; align-items: center;">
+    <!-- Keyword Search -->
+    <div style="flex: 2; min-width: 220px;">
+      <input type="text" name="search" class="form-control" placeholder="ค้นหาตามรหัส, ชื่อโครงการ, ผู้รับผิดชอบ..." value="{{ search_query or '' }}" id="inputSearchQuery">
+    </div>
+
+    <!-- Category Filter -->
+    <div style="flex: 2; min-width: 200px;">
+      <select name="category" class="form-select" id="selectFilterCategory">
+        <option value="">หมวด EdPEx / AUN-QA ทั้งหมด</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Status Filter -->
+    <div style="flex: 1; min-width: 140px;">
+      <select name="status" class="form-select" id="selectFilterStatus">
+        <option value="">ทุกสถานะ</option>
+        <option value="not_started" {% if selected_status == 'not_started' %}selected{% endif %}>ยังไม่เริ่ม</option>
+        <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>กำลังทำ</option>
+        <option value="under_review" {% if selected_status == 'under_review' %}selected{% endif %}>รอตรวจประเมิน</option>
+        <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>เสร็จสิ้น</option>
+        <option value="delayed" {% if selected_status == 'delayed' %}selected{% endif %}>ล่าช้า</option>
+      </select>
+    </div>
+
+    <!-- Year Filter -->
+    <div style="flex: 1; min-width: 130px;">
+      <select name="fiscal_year" class="form-select" id="selectFilterYear">
+        <option value="">ทุกปีงบฯ</option>
+        <option value="2567" {% if selected_year == 2567 %}selected{% endif %}>ปี 2567</option>
+        <option value="2568" {% if selected_year == 2568 %}selected{% endif %}>ปี 2568</option>
+      </select>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display: flex; gap: 0.5rem;">
+      <button type="submit" class="btn btn-primary" id="btnFilterSubmit">
+        <i class="fa-solid fa-magnifying-glass"></i> ค้นหา
+      </button>
+      <a href="{{ url_for('projects_list') }}" class="btn btn-secondary" title="ล้างตัวกรอง" id="btnFilterReset">
+        <i class="fa-solid fa-rotate-left"></i> รีเซ็ต
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Project Table Card -->
+<div class="card" id="cardProjectsTable">
+  <div class="card-header">
+    <div class="card-title">
+      <span>ผลการค้นหา: <strong>{{ projects|length }}</strong> รายการ</span>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>รหัสโครงการ</th>
+          <th>ชื่อโครงการ / หมวด EdPEx</th>
+          <th>สาขาวิชา/หน่วยงาน</th>
+          <th>ผู้รับผิดชอบ</th>
+          <th>ปีงบประมาณ</th>
+          <th>งบจัดสรร (บาท)</th>
+          <th>เบิกจ่ายจริง</th>
+          <th>สถานะ</th>
+          <th>PDCA</th>
+          <th style="text-align: center;">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in projects %}
+        <tr>
+          <td><strong style="color: var(--primary);">{{ p.code }}</strong></td>
+          <td>
+            <a href="{{ url_for('project_detail', project_id=p.id) }}" style="color: var(--text-main); font-weight: 600; text-decoration: none;">
+              {{ p.title }}
+            </a>
+            <div style="font-size: 0.76rem; margin-top: 0.2rem;">
+              <span class="badge-edpex">{{ p.category }}</span>
+            </div>
+          </td>
+          <td>{{ p.department }}</td>
+          <td>{{ p.leader }}</td>
+          <td>{{ p.fiscal_year }}</td>
+          <td>{{ "{:,.2f}".format(p.budget_allocated) }}</td>
+          <td>
+            <div>{{ "{:,.2f}".format(p.budget_spent) }}</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted);">
+              {% if p.budget_allocated > 0 %}
+                ({{ ((p.budget_spent / p.budget_allocated) * 100) | round(1) }}%)
+              {% else %}
+                (0%)
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{{ p.status }}">
+              {% if p.status == 'completed' %}เสร็จสิ้น
+              {% elif p.status == 'in_progress' %}กำลังดำเนินการ
+              {% elif p.status == 'under_review' %}รอตรวจประเมิน
+              {% elif p.status == 'delayed' %}ล่าช้า
+              {% else %}ยังไม่เริ่ม{% endif %}
+            </span>
+          </td>
+          <td><span class="badge-pdca">{{ p.pdca_stage }}</span></td>
+          <td style="text-align: center; white-space: nowrap;">
+            <a href="{{ url_for('project_detail', project_id=p.id) }}" class="btn btn-secondary btn-sm" title="ดูรายละเอียด">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+            <a href="{{ url_for('project_edit', project_id=p.id) }}" class="btn btn-secondary btn-sm" title="แก้ไข">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+            <form method="POST" action="{{ url_for('project_delete', project_id=p.id) }}" style="display: inline;" onsubmit="return confirm('ยืนยันที่จะลบโครงการ {{ p.code }}: {{ p.title }} หรือไม่?');">
+              <button type="submit" class="btn btn-danger btn-sm" title="ลบ">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+            <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 0.75rem; color: #cbd5e1; display: block;"></i>
+            ไม่พบข้อมูลโครงการตามเงื่อนไขที่เลือก กรุณาลองค้นหาใหม่ หรือคลิก "เสนอโครงการใหม่"
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

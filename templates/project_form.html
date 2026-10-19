@@ -1,0 +1,161 @@
+{% extends "layout.html" %}
+
+{% block title %}{% if project %}แก้ไขโครงการ {{ project.code }}{% else %}เสนอโครงการใหม่{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2>
+      <i class="fa-solid {% if project %}fa-pen-to-square{% else %}fa-plus-circle{% endif %}" style="color: var(--accent);"></i>
+      {% if project %}แก้ไขข้อมูลโครงการ [{{ project.code }}]{% else %}เสนอโครงการใหม่ตามแผนปฏิบัติราชการ{% endif %}
+    </h2>
+    <p>คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยหาดใหญ่</p>
+  </div>
+  <div class="header-actions">
+    <a href="{% if project %}{{ url_for('project_detail', project_id=project.id) }}{% else %}{{ url_for('projects_list') }}{% endif %}" class="btn btn-secondary">
+      <i class="fa-solid fa-arrow-left"></i> ยกเลิก / ย้อนกลับ
+    </a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 950px; margin: 0 auto;" id="cardProjectForm">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-file-pen" style="color: var(--accent);"></i> รายละเอียดแบบฟอร์มข้อมูลโครงการ
+    </div>
+  </div>
+  <div class="card-body">
+    <form method="POST">
+      <!-- Section 1: Basic Info -->
+      <h3 style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem;">
+        1. ข้อมูลพื้นฐานโครงการ (Basic Information)
+      </h3>
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">รหัสโครงการ (Project Code) *</label>
+          <input type="text" name="code" class="form-control" placeholder="เช่น PRJ-2567-006" value="{{ project.code if project else '' }}" required id="inputCode">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อโครงการ (Project Title) *</label>
+          <input type="text" name="title" class="form-control" placeholder="ระบุชื่อโครงการ..." value="{{ project.title if project else '' }}" required id="inputTitle">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">หมวดประกันคุณภาพ EdPEx / AUN-QA *</label>
+          <select name="category" class="form-select" required id="selectCategory">
+            {% for cat in categories %}
+              <option value="{{ cat }}" {% if project and project.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ปีงบประมาณ (พ.ศ.) *</label>
+          <input type="number" name="fiscal_year" class="form-control" value="{{ project.fiscal_year if project else 2567 }}" min="2500" max="2650" required id="inputFiscalYear">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">สาขาวิชา / ฝ่ายงานที่รับผิดชอบ *</label>
+          <input type="text" name="department" class="form-control" placeholder="เช่น สาขาวิทยาการคอมพิวเตอร์และสารสนเทศ" value="{{ project.department if project else '' }}" required id="inputDepartment">
+        </div>
+        <div class="form-group">
+          <label class="form-label">อาจารย์ / บุคลากรผู้รับผิดชอบโครงการ *</label>
+          <input type="text" name="leader" class="form-control" placeholder="เช่น ผศ.ดร.สมชาย ใจดี" value="{{ project.leader if project else '' }}" required id="inputLeader">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">วันที่เริ่มต้น</label>
+          <input type="date" name="start_date" class="form-control" value="{{ project.start_date if project else '' }}" id="inputStartDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">วันที่สิ้นสุด</label>
+          <input type="date" name="end_date" class="form-control" value="{{ project.end_date if project else '' }}" id="inputEndDate">
+        </div>
+      </div>
+
+      <!-- Section 2: Budget & Status -->
+      <h3 style="font-size: 1rem; color: var(--primary); margin: 1.5rem 0 1rem 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem;">
+        2. งบประมาณ และสถานะการดำเนินงาน (Budget & Progress)
+      </h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">งบประมาณที่ได้รับจัดสรร (บาท) *</label>
+          <input type="number" step="0.01" name="budget_allocated" class="form-control" placeholder="0.00" value="{{ project.budget_allocated if project else '0.0' }}" min="0" required id="inputBudgetAllocated">
+        </div>
+        <div class="form-group">
+          <label class="form-label">งบประมาณที่เบิกจ่ายจริง (บาท) *</label>
+          <input type="number" step="0.01" name="budget_spent" class="form-control" placeholder="0.00" value="{{ project.budget_spent if project else '0.0' }}" min="0" required id="inputBudgetSpent">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">สถานะโครงการ *</label>
+          <select name="status" class="form-select" required id="selectStatus">
+            <option value="not_started" {% if project and project.status == 'not_started' %}selected{% endif %}>ยังไม่เริ่มต้น (Not Started)</option>
+            <option value="in_progress" {% if project and project.status == 'in_progress' %}selected{% endif %}>กำลังดำเนินงาน (In Progress)</option>
+            <option value="under_review" {% if project and project.status == 'under_review' %}selected{% endif %}>รอตรวจประเมิน/สรุปผล (Under Review)</option>
+            <option value="completed" {% if project and project.status == 'completed' %}selected{% endif %}>เสร็จสิ้นสมบูรณ์ (Completed)</option>
+            <option value="delayed" {% if project and project.status == 'delayed' %}selected{% endif %}>ล่าช้ากว่าแผน (Delayed)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ขั้นตอนวงจร PDCA *</label>
+          <select name="pdca_stage" class="form-select" required id="selectPdcaStage">
+            <option value="plan" {% if project and project.pdca_stage == 'plan' %}selected{% endif %}>Plan (วางแผน / เสนอขออนุมัติ)</option>
+            <option value="do" {% if project and project.pdca_stage == 'do' %}selected{% endif %}>Do (กำลังดำเนินกิจกรรม)</option>
+            <option value="check" {% if project and project.pdca_stage == 'check' %}selected{% endif %}>Check (ประเมินผลตัวชี้วัด / สรุปงบ)</option>
+            <option value="act" {% if project and project.pdca_stage == 'act' %}selected{% endif %}>Act (ปรับปรุงและพัฒนาต่อเนื่อง)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Section 3: PDCA Details -->
+      <h3 style="font-size: 1rem; color: var(--primary); margin: 1.5rem 0 1rem 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem;">
+        3. วัตถุประสงค์ ผลผลิต และผลลัพธ์ (Objectives & Outcomes)
+      </h3>
+      <div class="form-group">
+        <label class="form-label">วัตถุประสงค์ของโครงการ (Objective)</label>
+        <textarea name="objective" class="form-control" placeholder="ระบุวัตถุประสงค์หลักของโครงการ...">{{ project.objective if project else '' }}</textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">ผลผลิตที่ได้ (Output)</label>
+          <textarea name="output" class="form-control" placeholder="เช่น จำนวนผู้เข้าร่วมอบรม, รายงานสรุป 1 ฉบับ...">{{ project.output if project else '' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ผลลัพธ์ / ผลกระทบ (Outcome)</label>
+          <textarea name="outcome" class="form-control" placeholder="เช่น ผู้ผ่านการอบรมนำความรู้ไปพัฒนางานวิจัย...">{{ project.outcome if project else '' }}</textarea>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">ปัญหา / อุปสรรค (Problems)</label>
+          <textarea name="problems" class="form-control" placeholder="ปัญหาหรือข้อจำกัดที่พบระหว่างดำเนินงาน...">{{ project.problems if project else '' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">แนวทางแก้ไข / ปรับปรุง (Solutions)</label>
+          <textarea name="solutions" class="form-control" placeholder="แนวทางแก้ไขหรือข้อเสนอแนะสำหรับการปรับปรุง...">{{ project.solutions if project else '' }}</textarea>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+        <a href="{% if project %}{{ url_for('project_detail', project_id=project.id) }}{% else %}{{ url_for('projects_list') }}{% endif %}" class="btn btn-secondary">
+          ยกเลิก
+        </a>
+        <button type="submit" class="btn btn-primary" id="btnSubmitProject">
+          <i class="fa-solid fa-floppy-disk"></i> {% if project %}บันทึกการแก้ไขโครงการ{% else %}บันทึกข้อมูลโครงการ{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

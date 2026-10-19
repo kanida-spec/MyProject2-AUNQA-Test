@@ -1,0 +1,320 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ project.code }} - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2>
+      <span style="color: var(--primary);">[{{ project.code }}]</span> {{ project.title }}
+    </h2>
+    <p><i class="fa-solid fa-graduation-cap"></i> {{ project.department }} | ผู้รับผิดชอบ: <strong>{{ project.leader }}</strong> | ปีงบประมาณ <strong>{{ project.fiscal_year }}</strong></p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('projects_list') }}" class="btn btn-secondary">
+      <i class="fa-solid fa-arrow-left"></i> กลับหน้ารายการ
+    </a>
+    <a href="{{ url_for('project_edit', project_id=project.id) }}" class="btn btn-primary">
+      <i class="fa-solid fa-pen-to-square"></i> แก้ไขโครงการ
+    </a>
+  </div>
+</div>
+
+<!-- PDCA Visual Stepper -->
+<div class="card" id="cardPdcaStepper">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-arrows-spin" style="color: var(--accent);"></i> วงจรการบริหารงานคุณภาพ (PDCA Cycle)
+    </div>
+    <span class="badge badge-{{ project.status }}" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+      สถานะ: 
+      {% if project.status == 'completed' %}เสร็จสิ้น
+      {% elif project.status == 'in_progress' %}กำลังดำเนินการ
+      {% elif project.status == 'under_review' %}รอตรวจประเมิน
+      {% elif project.status == 'delayed' %}ล่าช้ากว่าแผน
+      {% else %}ยังไม่เริ่ม{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="pdca-stepper">
+      <!-- Step P -->
+      <div class="pdca-step {% if project.pdca_stage in ['plan', 'do', 'check', 'act'] %}completed{% endif %} {% if project.pdca_stage == 'plan' %}active{% endif %}">
+        <div class="pdca-circle">P</div>
+        <div class="pdca-label">Plan<br><span style="font-size: 0.7rem; color: var(--text-muted);">วางแผน/ขออนุมัติ</span></div>
+      </div>
+      <!-- Step D -->
+      <div class="pdca-step {% if project.pdca_stage in ['do', 'check', 'act'] %}completed{% endif %} {% if project.pdca_stage == 'do' %}active{% endif %}">
+        <div class="pdca-circle">D</div>
+        <div class="pdca-label">Do<br><span style="font-size: 0.7rem; color: var(--text-muted);">ดำเนินกิจกรรม</span></div>
+      </div>
+      <!-- Step C -->
+      <div class="pdca-step {% if project.pdca_stage in ['check', 'act'] %}completed{% endif %} {% if project.pdca_stage == 'check' %}active{% endif %}">
+        <div class="pdca-circle">C</div>
+        <div class="pdca-label">Check<br><span style="font-size: 0.7rem; color: var(--text-muted);">ประเมินผล/SAR</span></div>
+      </div>
+      <!-- Step A -->
+      <div class="pdca-step {% if project.pdca_stage == 'act' %}completed active{% endif %}">
+        <div class="pdca-circle">A</div>
+        <div class="pdca-label">Act<br><span style="font-size: 0.7rem; color: var(--text-muted);">ปรับปรุงพัฒนาต่อยอด</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Details & Budget Grid -->
+<div class="grid-2">
+  <!-- Left: Project Info -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-circle-info" style="color: var(--accent);"></i> ข้อมูลทั่วไปและเป้าหมายโครงการ
+      </div>
+      <span class="badge-edpex">{{ project.category }}</span>
+    </div>
+    <div class="card-body" style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.9rem;">
+      <div>
+        <strong style="color: var(--text-muted); font-size: 0.8rem; display: block;">วัตถุประสงค์ (Objective):</strong>
+        <p style="margin-top: 0.2rem;">{{ project.objective or '-' }}</p>
+      </div>
+      <div>
+        <strong style="color: var(--text-muted); font-size: 0.8rem; display: block;">ผลผลิตที่ได้ (Output):</strong>
+        <p style="margin-top: 0.2rem;">{{ project.output or '-' }}</p>
+      </div>
+      <div>
+        <strong style="color: var(--text-muted); font-size: 0.8rem; display: block;">ผลลัพธ์/ผลกระทบ (Outcome):</strong>
+        <p style="margin-top: 0.2rem;">{{ project.outcome or '-' }}</p>
+      </div>
+      <div style="background-color: #f8fafc; padding: 0.85rem; border-radius: var(--radius-md); border-left: 3px solid #f59e0b;">
+        <strong style="color: #b45309; font-size: 0.8rem; display: block;">ปัญหา / อุปสรรค และแนวทางแก้ไข:</strong>
+        <p style="margin-top: 0.2rem;"><strong>ปัญหา:</strong> {{ project.problems or '-' }}</p>
+        <p style="margin-top: 0.2rem;"><strong>แนวทางแก้ไข:</strong> {{ project.solutions or '-' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Budget Status Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-money-bill-transfer" style="color: var(--accent);"></i> การบริหารงบประมาณโครงการ
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">งบประมาณที่ได้รับจัดสรร</div>
+          <div style="font-size: 1.35rem; font-weight: 700; color: var(--primary);">{{ "{:,.2f}".format(project.budget_allocated) }} บาท</div>
+        </div>
+        <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="font-size: 0.8rem; color: var(--text-muted);">งบประมาณเบิกจ่ายจริง</div>
+          <div style="font-size: 1.35rem; font-weight: 700; color: #d97706;">{{ "{:,.2f}".format(project.budget_spent) }} บาท</div>
+        </div>
+      </div>
+
+      {% set remaining = project.budget_allocated - project.budget_spent %}
+      {% set spent_pct = ((project.budget_spent / project.budget_allocated) * 100) | round(1) if project.budget_allocated > 0 else 0 %}
+      <div style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+          <span>สัดส่วนการเบิกจ่ายงบประมาณ</span>
+          <span>{{ spent_pct }}% (คงเหลือ {{ "{:,.2f}".format(remaining) }} บาท)</span>
+        </div>
+        <div class="progress-bar-container" style="height: 12px;">
+          <div class="progress-bar-fill progress-amber" style="width: {{ spent_pct }}%;"></div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.82rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.35rem; margin-top: 1rem;">
+        <div><i class="fa-regular fa-calendar-check"></i> วันที่เริ่มต้น: {{ project.start_date or 'ไม่ได้ระบุ' }}</div>
+        <div><i class="fa-regular fa-calendar-xmark"></i> วันที่สิ้นสุด: {{ project.end_date or 'ไม่ได้ระบุ' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Linked QA Indicators Section -->
+<div class="card" id="cardLinkedQa">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-award" style="color: var(--accent);"></i> การเชื่อมโยงตัวชี้วัดประกันคุณภาพ (EdPEx & AUN-QA)
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('linkIndicatorModal')">
+      <i class="fa-solid fa-link"></i> ผูกตัวชี้วัด QA เพิ่มเติม
+    </button>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>รหัสตัวชี้วัด</th>
+          <th>ชื่อตัวชี้วัดประกันคุณภาพ</th>
+          <th>หมวด EdPEx / เกณฑ์ QA</th>
+          <th>เป้าหมาย</th>
+          <th>ผลงานจริง</th>
+          <th>คำอธิบายการส่งผลต่อตัวชี้วัด</th>
+          <th style="text-align: center;">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ind in project.indicators %}
+        <tr>
+          <td><strong style="color: var(--primary);">{{ ind.code }}</strong></td>
+          <td>{{ ind.name }}</td>
+          <td><span class="badge-edpex">{{ ind.category }}</span></td>
+          <td>{{ ind.target_value }} {{ ind.unit }}</td>
+          <td>
+            <strong style="color: {% if ind.actual_value >= ind.target_value %}#059669{% else %}#d97706{% endif %};">
+              {{ ind.actual_value }} {{ ind.unit }}
+            </strong>
+          </td>
+          <td>{{ ind.contribution_note or '-' }}</td>
+          <td style="text-align: center;">
+            <form method="POST" action="{{ url_for('project_unlink_indicator', project_id=project.id, indicator_id=ind.id) }}" style="display: inline;" onsubmit="return confirm('ยืนยันที่จะยกเลิกการผูกตัวชี้วัดนี้หรือไม่?');">
+              <button type="submit" class="btn btn-danger btn-sm" title="ยกเลิกการเชื่อมโยง">
+                <i class="fa-solid fa-unlink"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            โครงการนี้ยังไม่ได้ผูกกับตัวชี้วัดประกันคุณภาพ คลิก "ผูกตัวชี้วัด QA เพิ่มเติม" เพื่อเชื่อมโยงโครงการเข้ากับเกณฑ์ EdPEx หรือ AUN-QA
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Evidence & SAR Documents Section -->
+<div class="card" id="cardEvidence">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-paperclip" style="color: var(--accent);"></i> แหล่งจัดเก็บเอกสารและหลักฐานประกอบการตรวจประเมิน SAR (Evidence Repository)
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('addEvidenceModal')">
+      <i class="fa-solid fa-plus"></i> แนบหลักฐานอ้างอิง
+    </button>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ชื่อเอกสาร / รายการหลักฐาน</th>
+          <th>ประเภท</th>
+          <th>ลิงก์เปิดดูหลักฐาน</th>
+          <th>วันที่บันทึก</th>
+          <th style="text-align: center;">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ev in project.evidence %}
+        <tr>
+          <td>
+            <i class="fa-solid {% if ev.doc_type == 'pdf' %}fa-file-pdf text-danger{% else %}fa-link text-primary{% endif %}"></i>
+            <strong style="margin-left: 0.35rem;">{{ ev.title }}</strong>
+          </td>
+          <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ ev.doc_type | upper }}</span></td>
+          <td>
+            <a href="{{ ev.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดดูเอกสารหลักฐาน
+            </a>
+          </td>
+          <td>{{ ev.created_at[:10] }}</td>
+          <td style="text-align: center;">
+            <form method="POST" action="{{ url_for('delete_evidence', project_id=project.id, evidence_id=ev.id) }}" style="display: inline;" onsubmit="return confirm('ยืนยันลบหลักฐานนี้หรือไม่?');">
+              <button type="submit" class="btn btn-danger btn-sm" title="ลบ">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            ยังไม่มีเอกสารหลักฐานที่แนบไว้ คลิก "แนบหลักฐานอ้างอิง" เพื่อใส่ลิงก์ Google Drive, SharePoint หรือรายงาน SAR
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal 1: Add Evidence Link -->
+<div class="modal-overlay" id="addEvidenceModal">
+  <div class="modal-box">
+    <form method="POST" action="{{ url_for('add_evidence', project_id=project.id) }}">
+      <div class="modal-header">
+        <div class="modal-title"><i class="fa-solid fa-paperclip"></i> แนบเอกสารหลักฐานอ้างอิง SAR</div>
+        <button type="button" class="modal-close" onclick="closeModal('addEvidenceModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">ชื่อเอกสารหรือรายการหลักฐาน *</label>
+          <input type="text" name="title" class="form-control" placeholder="เช่น เล่มรายงานผลโครงการ 2567 (Google Drive)" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">URL ลิงก์เอกสารอ้างอิง *</label>
+          <input type="url" name="url" class="form-control" placeholder="https://drive.google.com/..." required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ประเภทเอกสาร</label>
+          <select name="doc_type" class="form-select">
+            <option value="link">เว็บลิงก์ / Google Drive / OneDrive</option>
+            <option value="pdf">ไฟล์เอกสาร PDF</option>
+            <option value="doc">ไฟล์เอกสาร Word / Excel</option>
+            <option value="image">รูปภาพกิจกรรม</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addEvidenceModal')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> บันทึกหลักฐาน</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 2: Link QA Indicator -->
+<div class="modal-overlay" id="linkIndicatorModal">
+  <div class="modal-box">
+    <form method="POST" action="{{ url_for('project_link_indicator', project_id=project.id) }}">
+      <div class="modal-header">
+        <div class="modal-title"><i class="fa-solid fa-link"></i> ผูกโครงการเข้ากับตัวชี้วัดประกันคุณภาพ</div>
+        <button type="button" class="modal-close" onclick="closeModal('linkIndicatorModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">เลือกตัวชี้วัด EdPEx / AUN-QA *</label>
+          <select name="indicator_id" class="form-select" required>
+            {% for ind in all_indicators %}
+              <option value="{{ ind.id }}">{{ ind.code }} - {{ ind.name }} ({{ ind.category }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">คำอธิบายการส่งผลต่อตัวชี้วัด</label>
+          <input type="text" name="contribution_note" class="form-control" placeholder="เช่น ส่งผลให้ผ่านเกณฑ์ตัวชี้วัดข้อ 1.1 ร้อยละ 85">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('linkIndicatorModal')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> เชื่อมโยงตัวชี้วัด</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+</script>
+{% endblock %}

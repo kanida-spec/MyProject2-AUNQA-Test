@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}ตัวชี้วัดประกันคุณภาพ EdPEx & AUN-QA{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><i class="fa-solid fa-award" style="color: var(--accent);"></i> ตัวชี้วัดการประกันคุณภาพการศึกษา (EdPEx & AUN-QA)</h2>
+    <p>เกณฑ์คุณภาพการศึกษาเพื่อการดำเนินการที่เป็นเลิศ 7 หมวด และ AUN-QA ระดับหลักสูตร คณะวิทยาศาสตร์และเทคโนโลยี</p>
+  </div>
+  <div class="header-actions">
+    <button type="button" class="btn btn-primary" onclick="openModal('addIndicatorModal')" id="btnAddNewIndicator">
+      <i class="fa-solid fa-plus-circle"></i> เพิ่มตัวชี้วัดใหม่
+    </button>
+  </div>
+</div>
+
+<!-- Category Filter Pills -->
+<div class="filter-bar" style="margin-bottom: 1.5rem;" id="indicatorFilterBar">
+  <form method="GET" action="{{ url_for('indicators_list') }}" style="display: flex; gap: 0.75rem; width: 100%; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 250px;">
+      <select name="category" class="form-select" onchange="this.form.submit()" id="selectIndicatorCategory">
+        <option value="">-- แสดงตัวชี้วัดทุกหมวด (EdPEx 7 หมวด & AUN-QA) --</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if selected_category %}
+      <a href="{{ url_for('indicators_list') }}" class="btn btn-secondary btn-sm">
+        <i class="fa-solid fa-rotate-left"></i> แสดงทุกหมวด
+      </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Indicators Table Card -->
+<div class="card" id="cardIndicatorsTable">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-list-ol" style="color: var(--accent);"></i> รายการตัวชี้วัดประกันคุณภาพ ({{ indicators|length }} ตัวชี้วัด)
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>รหัสตัวชี้วัด</th>
+          <th>ชื่อตัวชี้วัด</th>
+          <th>หมวด EdPEx / AUN-QA</th>
+          <th>เป้าหมาย</th>
+          <th>ผลงานจริง</th>
+          <th>การบรรลุเป้าหมาย</th>
+          <th>โครงการที่เชื่อมโยง</th>
+          <th style="text-align: center;">ปรับปรุงผลงาน</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ind in indicators %}
+        {% set achieved = ind.actual_value >= ind.target_value and ind.target_value > 0 %}
+        {% set progress_pct = ((ind.actual_value / ind.target_value) * 100) | round(1) if ind.target_value > 0 else 0 %}
+        <tr>
+          <td><strong style="color: var(--primary);">{{ ind.code }}</strong></td>
+          <td>
+            <div style="font-weight: 600;">{{ ind.name }}</div>
+            {% if ind.description %}
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">{{ ind.description }}</div>
+            {% endif %}
+          </td>
+          <td><span class="badge-edpex">{{ ind.category }}</span></td>
+          <td><strong>{{ ind.target_value }}</strong> {{ ind.unit }}</td>
+          <td>
+            <strong style="color: {% if achieved %}#059669{% else %}#d97706{% endif %}; font-size: 1rem;">
+              {{ ind.actual_value }}
+            </strong> {{ ind.unit }}
+          </td>
+          <td style="min-width: 140px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.2rem;">
+              <span>{% if achieved %}<span class="badge badge-completed">บรรลุเป้าหมาย</span>{% else %}<span class="badge badge-under_review">กำลังดำเนินการ</span>{% endif %}</span>
+              <span>{{ progress_pct }}%</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill {% if achieved %}progress-green{% else %}progress-amber{% endif %}" style="width: {% if progress_pct > 100 %}100{% else %}{{ progress_pct }}{% endif %}%;"></div>
+            </div>
+          </td>
+          <td>
+            <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">
+              {{ ind.linked_project_count }} โครงการ
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openUpdateModal('{{ ind.id }}', '{{ ind.code }}', '{{ ind.name }}', '{{ ind.actual_value }}', '{{ ind.unit }}')" title="บันทึกผลงานจริง">
+              <i class="fa-solid fa-pen"></i> อัปเดตผลงาน
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+            ไม่พบตัวชี้วัดในหมวดที่เลือก
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal 1: Update Actual Result -->
+<div class="modal-overlay" id="updateResultModal">
+  <div class="modal-box">
+    <form method="POST" action="{{ url_for('update_indicator_result') }}">
+      <input type="hidden" name="indicator_id" id="updateIndicatorId">
+      <div class="modal-header">
+        <div class="modal-title"><i class="fa-solid fa-chart-simple"></i> บันทึกผลการดำเนินงานจริง</div>
+        <button type="button" class="modal-close" onclick="closeModal('updateResultModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="updateIndicatorName" style="font-weight: 600; color: var(--primary-dark); margin-bottom: 1rem;"></p>
+        <div class="form-group">
+          <label class="form-label">ค่าผลงานจริงที่ทำได้ (<span id="updateIndicatorUnit"></span>) *</label>
+          <input type="number" step="0.01" name="actual_value" id="updateActualValue" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('updateResultModal')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> บันทึกผลงาน</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 2: Add New QA Indicator -->
+<div class="modal-overlay" id="addIndicatorModal">
+  <div class="modal-box">
+    <form method="POST" action="{{ url_for('indicator_add') }}">
+      <div class="modal-header">
+        <div class="modal-title"><i class="fa-solid fa-plus-circle"></i> เพิ่มตัวชี้วัดประกันคุณภาพใหม่</div>
+        <button type="button" class="modal-close" onclick="closeModal('addIndicatorModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">รหัสตัวชี้วัด *</label>
+          <input type="text" name="code" class="form-control" placeholder="เช่น EDPEX-1.3 หรือ AUN-3.1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อตัวชี้วัด *</label>
+          <input type="text" name="name" class="form-control" placeholder="ระบุชื่อตัวชี้วัด..." required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">หมวด EdPEx / เกณฑ์ AUN-QA *</label>
+          <select name="category" class="form-select" required>
+            {% for cat in categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">ค่าเป้าหมาย (Target) *</label>
+            <input type="number" step="0.01" name="target_value" class="form-control" placeholder="80.0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">หน่วยนับ (Unit) *</label>
+            <input type="text" name="unit" class="form-control" placeholder="เช่น ร้อยละ, คน, เรื่อง" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">คำอธิบายเพิ่มเติม</label>
+          <textarea name="description" class="form-control" placeholder="คำอธิบายเกณฑ์ หรือแนวทางวัดผล..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addIndicatorModal')">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> บันทึกตัวชี้วัด</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function openUpdateModal(id, code, name, actual, unit) {
+  document.getElementById('updateIndicatorId').value = id;
+  document.getElementById('updateIndicatorName').innerText = `[${code}] ${name}`;
+  document.getElementById('updateActualValue').value = actual;
+  document.getElementById('updateIndicatorUnit').innerText = unit;
+  openModal('updateResultModal');
+}
+</script>
+{% endblock %}

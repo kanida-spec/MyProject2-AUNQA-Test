@@ -1,0 +1,261 @@
+{% extends "layout.html" %}
+
+{% block title %}แดชบอร์ดภาพรวมผู้บริหาร{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-title">
+    <h2><i class="fa-solid fa-chart-line" style="color: var(--accent);"></i> แดชบอร์ดภาพรวมผู้บริหาร (Executive Dashboard)</h2>
+    <p>สรุปผลการดำเนินงานโครงการตามแผนปฏิบัติราชการ และตัวชี้วัดประกันคุณภาพ คณะวิทยาศาสตร์และเทคโนโลยี</p>
+  </div>
+  <div class="header-actions">
+    <!-- Filter by Year Form -->
+    <form method="GET" action="{{ url_for('dashboard') }}" style="display: flex; gap: 0.5rem; align-items: center;">
+      <select name="fiscal_year" class="form-select" onchange="this.form.submit()" style="padding: 0.45rem 0.85rem; font-size: 0.88rem; width: auto;" id="selectFiscalYear">
+        <option value="" {% if not selected_year %}selected{% endif %}>ปีงบประมาณทั้งหมด</option>
+        <option value="2567" {% if selected_year == 2567 %}selected{% endif %}>ปีงบประมาณ 2567</option>
+        <option value="2568" {% if selected_year == 2568 %}selected{% endif %}>ปีงบประมาณ 2568</option>
+      </select>
+    </form>
+    <a href="{{ url_for('export_csv', fiscal_year=selected_year or '') }}" class="btn btn-secondary" id="btnExportSar">
+      <i class="fa-solid fa-file-csv"></i> ส่งออกข้อมูล SAR (CSV)
+    </a>
+    {% if summary.total_projects == 0 %}
+    <form method="POST" action="{{ url_for('seed_data') }}" style="display: inline;">
+      <button type="submit" class="btn btn-success" id="btnSeedData">
+        <i class="fa-solid fa-database"></i> โหลดชุดข้อมูลตัวอย่างคณะ
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPI Stat Cards Grid -->
+<div class="stats-grid">
+  <!-- Card 1: Total Projects -->
+  <div class="stat-card card-blue" id="kpiTotalProjects">
+    <div class="stat-icon" style="color: #2563eb;"><i class="fa-solid fa-diagram-project"></i></div>
+    <div class="stat-label">โครงการทั้งหมดในแผน</div>
+    <div class="stat-value">{{ summary.total_projects }} <span style="font-size: 1rem; font-weight: normal; color: var(--text-muted);">โครงการ</span></div>
+    <div class="stat-subtext">
+      <span class="badge badge-completed">{{ summary.status_counts.completed }} สำเร็จ</span>
+      <span class="badge badge-in_progress" style="margin-left: 0.25rem;">{{ summary.status_counts.in_progress }} กำลังทำ</span>
+    </div>
+  </div>
+
+  <!-- Card 2: Total Budget Allocated -->
+  <div class="stat-card card-cyan" id="kpiTotalBudget">
+    <div class="stat-icon" style="color: #0891b2;"><i class="fa-solid fa-coins"></i></div>
+    <div class="stat-label">งบประมาณจัดสรรรวม</div>
+    <div class="stat-value">{{ "{:,.2f}".format(summary.total_budget_allocated) }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">บาท</span></div>
+    <div class="stat-subtext">คงเหลือ {{ "{:,.2f}".format(summary.budget_remaining) }} บาท</div>
+  </div>
+
+  <!-- Card 3: Spent Budget & Utilization -->
+  <div class="stat-card card-amber" id="kpiBudgetSpent">
+    <div class="stat-icon" style="color: #d97706;"><i class="fa-solid fa-receipt"></i></div>
+    <div class="stat-label">งบประมาณเบิกจ่ายจริง</div>
+    <div class="stat-value">{{ "{:,.2f}".format(summary.total_budget_spent) }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">บาท</span></div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill progress-amber" style="width: {{ summary.budget_utilization }}%;"></div>
+    </div>
+    <div class="stat-subtext highlight">เบิกจ่ายแล้ว {{ summary.budget_utilization }}%</div>
+  </div>
+
+  <!-- Card 4: Project Completion Rate -->
+  <div class="stat-card card-green" id="kpiCompletionRate">
+    <div class="stat-icon" style="color: #059669;"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="stat-label">อัตราความสำเร็จของโครงการ</div>
+    <div class="stat-value">{{ summary.completion_rate }} <span style="font-size: 1rem; font-weight: normal; color: var(--text-muted);">%</span></div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill progress-green" style="width: {{ summary.completion_rate }}%;"></div>
+    </div>
+    <div class="stat-subtext">เสร็จสิ้น {{ summary.status_counts.completed }} จาก {{ summary.total_projects }} โครงการ</div>
+  </div>
+
+  <!-- Card 5: QA Indicators Achievement -->
+  <div class="stat-card card-purple" id="kpiQaAchievement">
+    <div class="stat-icon" style="color: #7c3aed;"><i class="fa-solid fa-award"></i></div>
+    <div class="stat-label">ตัวชี้วัด QA บรรลุเป้าหมาย</div>
+    <div class="stat-value">{{ summary.qa_achievement_rate }} <span style="font-size: 1rem; font-weight: normal; color: var(--text-muted);">%</span></div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill progress-purple" style="width: {{ summary.qa_achievement_rate }}%;"></div>
+    </div>
+    <div class="stat-subtext">ผ่านเกณฑ์ {{ summary.achieved_indicators }} จาก {{ summary.total_indicators }} ตัวชี้วัด</div>
+  </div>
+</div>
+
+<!-- Breakdown Sections Grid -->
+<div class="grid-2">
+  <!-- Status Distribution Breakdown -->
+  <div class="card" id="cardStatusDistribution">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-bars-progress" style="color: var(--accent);"></i> จำแนกสถานะการดำเนินงานโครงการ
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 500; margin-bottom: 0.25rem;">
+            <span><span class="badge badge-completed">เสร็จสิ้น (Completed)</span></span>
+            <span>{{ summary.status_counts.completed }} โครงการ ({% if summary.total_projects %}{{ ((summary.status_counts.completed / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%)</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-green" style="width: {% if summary.total_projects %}{{ ((summary.status_counts.completed / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 500; margin-bottom: 0.25rem;">
+            <span><span class="badge badge-in_progress">กำลังดำเนินงาน (In Progress)</span></span>
+            <span>{{ summary.status_counts.in_progress }} โครงการ ({% if summary.total_projects %}{{ ((summary.status_counts.in_progress / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%)</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-blue" style="width: {% if summary.total_projects %}{{ ((summary.status_counts.in_progress / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 500; margin-bottom: 0.25rem;">
+            <span><span class="badge badge-under_review">รอตรวจประเมิน/สรุปผล (Under Review)</span></span>
+            <span>{{ summary.status_counts.under_review }} โครงการ ({% if summary.total_projects %}{{ ((summary.status_counts.under_review / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%)</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill progress-amber" style="width: {% if summary.total_projects %}{{ ((summary.status_counts.under_review / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 500; margin-bottom: 0.25rem;">
+            <span><span class="badge badge-delayed">ล่าช้ากว่าแผน (Delayed)</span></span>
+            <span>{{ summary.status_counts.delayed }} โครงการ ({% if summary.total_projects %}{{ ((summary.status_counts.delayed / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%)</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="background: #ef4444; width: {% if summary.total_projects %}{{ ((summary.status_counts.delayed / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 500; margin-bottom: 0.25rem;">
+            <span><span class="badge badge-not_started">ยังไม่เริ่มต้น (Not Started)</span></span>
+            <span>{{ summary.status_counts.not_started }} โครงการ ({% if summary.total_projects %}{{ ((summary.status_counts.not_started / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%)</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="background: #94a3b8; width: {% if summary.total_projects %}{{ ((summary.status_counts.not_started / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EdPEx & AUN-QA Category Distribution -->
+  <div class="card" id="cardEdpexDistribution">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-layer-group" style="color: var(--accent);"></i> โครงการและงบประมาณแยกตามหมวด EdPEx / AUN-QA
+      </div>
+    </div>
+    <div class="card-body">
+      {% if summary.category_distribution %}
+        <div style="display: flex; flex-direction: column; gap: 0.95rem;">
+          {% for cat in summary.category_distribution %}
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 500;">
+                <span style="color: var(--primary-dark); font-weight: 600;">{{ cat.category }}</span>
+                <span style="color: var(--text-muted);">{{ cat.count }} โครงการ ({{ "{:,.0f}".format(cat.budget or 0) }} บาท)</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill progress-blue" style="width: {% if summary.total_projects %}{{ ((cat.count / summary.total_projects) * 100) | round(1) }}{% else %}0{% endif %}%;"></div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">ยังไม่มีข้อมูลโครงการที่จัดหมวดหมู่</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent Strategic Projects Table -->
+<div class="card" id="cardRecentProjects">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-calendar-check" style="color: var(--accent);"></i> แผนงานโครงการล่าสุด คณะวิทยาศาสตร์และเทคโนโลยี
+    </div>
+    <a href="{{ url_for('projects_list') }}" class="btn btn-secondary btn-sm" id="btnViewAllProjects">
+      ดูโครงการทั้งหมด ({{ summary.total_projects }}) <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>รหัสโครงการ</th>
+          <th>ชื่อโครงการ</th>
+          <th>สาขาวิชา/ฝ่ายงาน</th>
+          <th>ผู้รับผิดชอบ</th>
+          <th>งบจัดสรร (บาท)</th>
+          <th>เบิกจ่ายจริง</th>
+          <th>สถานะ</th>
+          <th>PDCA</th>
+          <th style="text-align: center;">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_projects %}
+        <tr>
+          <td><strong style="color: var(--primary);">{{ p.code }}</strong></td>
+          <td>
+            <a href="{{ url_for('project_detail', project_id=p.id) }}" style="color: var(--text-main); font-weight: 600; text-decoration: none;">
+              {{ p.title }}
+            </a>
+            <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.15rem;">
+              <span class="badge-edpex">{{ p.category }}</span>
+            </div>
+          </td>
+          <td>{{ p.department }}</td>
+          <td>{{ p.leader }}</td>
+          <td>{{ "{:,.2f}".format(p.budget_allocated) }}</td>
+          <td>
+            <div>{{ "{:,.2f}".format(p.budget_spent) }}</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted);">
+              {% if p.budget_allocated > 0 %}
+                ({{ ((p.budget_spent / p.budget_allocated) * 100) | round(1) }}%)
+              {% else %}
+                (0%)
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{{ p.status }}">
+              {% if p.status == 'completed' %}เสร็จสิ้น
+              {% elif p.status == 'in_progress' %}กำลังดำเนินการ
+              {% elif p.status == 'under_review' %}รอตรวจประเมิน
+              {% elif p.status == 'delayed' %}ล่าช้า
+              {% else %}ยังไม่เริ่ม{% endif %}
+            </span>
+          </td>
+          <td><span class="badge-pdca">{{ p.pdca_stage }}</span></td>
+          <td style="text-align: center;">
+            <a href="{{ url_for('project_detail', project_id=p.id) }}" class="btn btn-secondary btn-sm" title="ดูรายละเอียด">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+            <a href="{{ url_for('project_edit', project_id=p.id) }}" class="btn btn-secondary btn-sm" title="แก้ไข">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+            ยังไม่มีข้อมูลโครงการ คลิก "โหลดชุดข้อมูลตัวอย่างคณะ" หรือ "เสนอโครงการใหม่" เพื่อเริ่มต้น
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
